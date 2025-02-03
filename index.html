@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MEGA URL Validator</title>
+    <script>
+        function isUrlValid(url) {
+            const regex = /https:\/\/mega\.nz\/(file|folder)\/[\s\S]*#[\s\S]*/;
+            const match = url.match(regex);
+            if (!match || match[0] !== url) {
+                return false;
+            }
+
+            const urlParts = url.split("/");
+            const urlType = urlParts[3];
+            const id = urlParts[4].split("#")[0];
+
+            let data;
+            if (urlType === 'folder') {
+                data = { "a": "f", "c": 1, "r": 1, "ca": 1 };
+            } else {
+                data = { "a": 'g', "p": id };
+            }
+
+            const params = new URLSearchParams({
+                id: Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join(''),
+                n: id
+            });
+
+            fetch('https://g.api.mega.co.nz/cs?' + params.toString(), {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify(data)
+            })
+            .then(response => response.json())
+            .then(result => {
+                if (result === -2) {
+                    alert("The URL is valid.");
+                } else {
+                    alert("The URL is invalid.");
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert("An error occurred while validating the URL.");
+            });
+        }
+
+        function validateUrl() {
+            const urlInput = document.getElementById('urlInput').value;
+            isUrlValid(urlInput);
+        }
+    </script>
+</head>
+<body>
+    <h1>MEGA URL Validator</h1>
+    <input type="text" id="urlInput" placeholder="Enter MEGA URL" />
+    <button onclick="validateUrl()">Validate URL</button>
+</body>
+</html>
