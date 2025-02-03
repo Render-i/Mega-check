@@ -6,9 +6,11 @@
     <title>MEGA URL Validator</title>
     <script>
         function isUrlValid(url) {
-            const regex = /https:\/\/mega\.nz\/(file|folder)\/[\s\S]*#[\s\S]*/;
+            const regex = /https:\/\/mega\.nz\/(file|folder)\/[\w-]+#[\w-]+/; // Updated regex for better matching
             const match = url.match(regex);
             if (!match || match[0] !== url) {
+                console.log("URL does not match regex.");
+                alert("The URL format is invalid.");
                 return false;
             }
 
@@ -37,6 +39,7 @@
             })
             .then(response => response.json())
             .then(result => {
+                console.log(result); // Log the result for debugging
                 if (result === -2) {
                     alert("The URL is valid.");
                 } else {
