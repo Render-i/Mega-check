@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MEGA URL Validator</title>
     <style>
+        /* Previous styles remain the same */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -139,13 +140,19 @@
                 try {
                     const response = await fetch(url, {
                         ...options,
-                        mode: 'cors',  // Explicitly request CORS
-                        credentials: 'omit'  // Don't send credentials
+                        mode: 'cors',
+                        credentials: 'omit'
                     });
                     if (!response.ok) {
                         throw new Error(`HTTP error! status: ${response.status}`);
                     }
-                    return await response.json();
+                    const text = await response.text(); // First get the response as text
+                    try {
+                        return JSON.parse(text); // Then parse it as JSON
+                    } catch (e) {
+                        console.error('Failed to parse JSON:', text);
+                        throw new Error('Invalid JSON response from API');
+                    }
                 } catch (error) {
                     if (i === maxRetries - 1) throw error;
                     await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
@@ -196,7 +203,7 @@
             apiLinkDiv.innerText = 'Checking MEGA API... ';
 
             try {
-                const result = await fetchWithRetry(apiUrl, {
+                const response = await fetchWithRetry(apiUrl, {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json'
@@ -204,15 +211,18 @@
                     body: JSON.stringify([data])
                 });
 
-                // Display the response code
-                apiLinkDiv.innerText = `MEGA API Response: ${result[0]}`;
+                // Extract the error code from the response array
+                const errorCode = Array.isArray(response) && response.length > 0 ? response[0] : null;
 
-                if (result[0] === -2) {
+                // Display the numeric error code
+                apiLinkDiv.innerText = `MEGA API Response Code: ${errorCode}`;
+
+                if (errorCode === -2) {
                     showResult('✓ The MEGA link is valid and the content exists!', 'success');
-                } else if (result[0] === -9) {
+                } else if (errorCode === -9) {
                     showResult('✗ Content not found (may have been deleted)', 'error');
                 } else {
-                    showResult(`✗ Invalid MEGA link (Error code: ${result[0]})`, 'error');
+                    showResult(`✗ Invalid MEGA link (Error code: ${errorCode})`, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
@@ -221,6 +231,7 @@
                 } else {
                     showResult('Network error while validating the URL. Please try again later.', 'error');
                 }
+                apiLinkDiv.innerText = `Error: ${error.message}`;
             }
         }
 
@@ -246,4 +257,4 @@
         });
     </script>
 </body>
-</html>
+    </html>
