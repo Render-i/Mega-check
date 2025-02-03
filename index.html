@@ -4,13 +4,19 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MEGA URL Validator</title>
+    <style>
+        #result {
+            margin-top: 20px;
+            font-weight: bold;
+        }
+    </style>
     <script>
         function isUrlValid(url) {
-            const regex = /https:\/\/mega\.nz\/(file|folder)\/[\w-]+#[\w-]+/; // Updated regex for better matching
+            const regex = /https:\/\/mega\.nz\/(file|folder)\/[\w-]+#[\w-]+/; // Regex to match MEGA URLs
             const match = url.match(regex);
             if (!match || match[0] !== url) {
                 console.log("URL does not match regex.");
-                alert("The URL format is invalid.");
+                document.getElementById('result').innerText = "The URL format is invalid.";
                 return false;
             }
 
@@ -41,14 +47,14 @@
             .then(result => {
                 console.log(result); // Log the result for debugging
                 if (result === -2) {
-                    alert("The URL is valid.");
+                    document.getElementById('result').innerText = "The URL is valid.";
                 } else {
-                    alert("The URL is invalid.");
+                    document.getElementById('result').innerText = "The URL is invalid.";
                 }
             })
             .catch(error => {
                 console.error('Error:', error);
-                alert("An error occurred while validating the URL.");
+                document.getElementById('result').innerText = "An error occurred while validating the URL.";
             });
         }
 
@@ -62,5 +68,6 @@
     <h1>MEGA URL Validator</h1>
     <input type="text" id="urlInput" placeholder="Enter MEGA URL" />
     <button onclick="validateUrl()">Validate URL</button>
+    <div id="result"></div> <!-- This div will display the result -->
 </body>
 </html>
