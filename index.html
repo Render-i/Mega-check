@@ -9,6 +9,11 @@
             margin-top: 20px;
             font-weight: bold;
         }
+        #apiLink {
+            margin-top: 10px;
+            font-style: italic;
+            color: gray;
+        }
     </style>
     <script>
         function isUrlValid(url) {
@@ -17,6 +22,7 @@
             if (!match || match[0] !== url) {
                 console.log("URL does not match regex.");
                 document.getElementById('result').innerText = "The URL format is invalid.";
+                document.getElementById('apiLink').innerText = ""; // Clear API link
                 return false;
             }
 
@@ -36,7 +42,10 @@
                 n: id
             });
 
-            fetch('https://g.api.mega.co.nz/cs?' + params.toString(), {
+            const apiUrl = 'https://g.api.mega.co.nz/cs?' + params.toString();
+            document.getElementById('apiLink').innerText = "Requesting API: " + apiUrl; // Display the API link
+
+            fetch(apiUrl, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json'
@@ -69,5 +78,6 @@
     <input type="text" id="urlInput" placeholder="Enter MEGA URL" />
     <button onclick="validateUrl()">Validate URL</button>
     <div id="result"></div> <!-- This div will display the result -->
+    <div id="apiLink"></div> <!-- This div will display the API link -->
 </body>
 </html>
