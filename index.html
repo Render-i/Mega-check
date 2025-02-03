@@ -5,7 +5,6 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MEGA URL Validator</title>
     <style>
-        /* Same styles as before */
         body {
             font-family: Arial, sans-serif;
             max-width: 800px;
@@ -13,33 +12,22 @@
             padding: 0 20px;
             background-color: #f5f5f5;
         }
-
         .container {
             background-color: white;
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
         }
-
         h1 {
             color: #333;
             text-align: center;
-            margin-bottom: 10px;
-        }
-
-        .subtitle {
-            text-align: center;
-            color: #666;
             margin-bottom: 30px;
-            font-size: 0.9em;
         }
-
         .input-group {
             display: flex;
             gap: 10px;
             margin-bottom: 20px;
         }
-
         input[type="text"] {
             flex: 1;
             padding: 12px;
@@ -47,7 +35,6 @@
             border-radius: 4px;
             font-size: 16px;
         }
-
         button {
             padding: 12px 24px;
             background-color: #4CAF50;
@@ -56,187 +43,96 @@
             border-radius: 4px;
             cursor: pointer;
             font-size: 16px;
-            transition: background-color 0.3s;
         }
-
-        button:hover {
-            background-color: #45a049;
-        }
-
         button:disabled {
             background-color: #cccccc;
             cursor: not-allowed;
         }
-
         #result {
             margin-top: 20px;
             padding: 15px;
             border-radius: 4px;
-            font-weight: bold;
             text-align: center;
+            font-weight: bold;
         }
-
-        #apiLink {
-            margin-top: 10px;
-            padding: 10px;
-            font-style: italic;
-            color: #666;
-            word-break: break-all;
-            font-size: 0.9em;
-        }
-
-        .success {
-            background-color: #dff0d8;
-            color: #3c763d;
-        }
-
-        .error {
-            background-color: #f2dede;
-            color: #a94442;
-        }
-
-        .loading {
-            background-color: #d9edf7;
-            color: #31708f;
-        }
-
-        .spinner {
-            display: inline-block;
-            width: 20px;
-            height: 20px;
-            border: 3px solid #f3f3f3;
-            border-top: 3px solid #3498db;
-            border-radius: 50%;
-            animation: spin 1s linear infinite;
-            margin-right: 10px;
-            vertical-align: middle;
-        }
-
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
+        .success { background-color: #dff0d8; color: #3c763d; }
+        .error { background-color: #f2dede; color: #a94442; }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>MEGA URL Validator</h1>
-        <div class="subtitle">Validates MEGA links directly from your browser</div>
         <div class="input-group">
-            <input type="text" id="urlInput" placeholder="Enter MEGA URL (https://mega.nz/file/... or folder/...)" />
-            <button onclick="validateUrl()" id="validateButton">Validate URL</button>
+            <input type="text" id="urlInput" placeholder="Enter MEGA URL" />
+            <button onclick="validateUrl()" id="validateButton">Validate</button>
         </div>
         <div id="result"></div>
-        <div id="apiLink"></div>
     </div>
 
     <script>
-        const validateButton = document.getElementById('validateButton');
-        const resultDiv = document.getElementById('result');
-        const apiLinkDiv = document.getElementById('apiLink');
-
-        async function fetchWithRetry(url, options, maxRetries = 3) {
-            for (let i = 0; i < maxRetries; i++) {
-                try {
-                    const response = await fetch(url, {
-                        ...options,
-                        mode: 'cors',
-                        credentials: 'omit'
-                    });
-                    if (!response.ok) {
-                        throw new Error(`HTTP error! status: ${response.status}`);
-                    }
-                    const responseText = await response.text();
-                    return parseInt(responseText); // Parse the response as a number
-                } catch (error) {
-                    if (i === maxRetries - 1) throw error;
-                    await new Promise(resolve => setTimeout(resolve, 1000 * Math.pow(2, i)));
-                }
-            }
-        }
-
-        function showResult(message, type) {
-            resultDiv.className = type;
-            resultDiv.innerHTML = message;
-        }
-
-        function setLoading(isLoading) {
-            validateButton.disabled = isLoading;
-            if (isLoading) {
-                showResult('<div class="spinner"></div> Validating...', 'loading');
-                apiLinkDiv.innerText = '';
-            }
-        }
+        const regex = /^https:\/\/mega\.nz\/(file|folder)\/[\s\S]*#[\s\S]*/;
+        const api = 'https://g.api.mega.co.nz/cs';
 
         async function isUrlValid(url) {
-            const regex = /^https:\/\/mega\.nz\/(file|folder)\/[a-zA-Z0-9_-]+#[a-zA-Z0-9_-]+$/;
-            const match = url.match(regex);
-            
+            const match = regex.exec(url);
             if (!match || match[0] !== url) {
-                showResult('The URL format is invalid. Please check the URL and try again.', 'error');
-                apiLinkDiv.innerText = '';
                 return false;
             }
 
-            const urlParts = url.split('/');
-            const urlType = urlParts[3];
-            const id = urlParts[4].split('#')[0];
-
-            let data;
-            if (urlType === 'folder') {
-                data = { "a": "f", "c": 1, "r": 1, "ca": 1 };
-            } else {
-                data = { "a": 'g', "p": id };
-            }
+            const urlType = url.split("/")[3];
+            const id = url.split("/")[4].split("#")[0];
+            
+            const data = urlType === 'folder' 
+                ? { "a": "f", "c": 1, "r": 1, "ca": 1 }
+                : { "a": "g", "p": id };
 
             const params = new URLSearchParams({
-                id: Array.from({ length: 10 }, () => Math.floor(Math.random() * 10)).join(''),
+                id: Array.from({length: 10}, () => Math.floor(Math.random() * 10)).join(''),
                 n: id
             });
 
-            const apiUrl = 'https://g.api.mega.co.nz/cs?' + params.toString();
-
             try {
-                const responseCode = await fetchWithRetry(apiUrl, {
+                const response = await fetch(`${api}?${params.toString()}`, {
                     method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json'
-                    },
+                    headers: { 'Content-Type': 'application/json' },
                     body: JSON.stringify([data])
                 });
-
-                // Display the numeric response code
-                apiLinkDiv.innerText = `MEGA API Response Code: ${responseCode}`;
-
-                if (responseCode === -2) {
-                    showResult('✓ The MEGA link is valid and the content exists!', 'success');
-                } else if (responseCode === -9) {
-                    showResult('✗ Content not found (may have been deleted)', 'error');
-                } else {
-                    showResult(`✗ Invalid MEGA link (Error code: ${responseCode})`, 'error');
-                }
+                
+                const result = await response.text();
+                return parseInt(result) === -2;
             } catch (error) {
                 console.error('Error:', error);
-                showResult('Network error while validating the URL. Please try again later.', 'error');
-                apiLinkDiv.innerText = `Error: ${error.message}`;
+                return false;
             }
         }
 
-        function validateUrl() {
-            const urlInput = document.getElementById('urlInput').value.trim();
+        function showResult(isValid) {
+            const resultDiv = document.getElementById('result');
+            if (isValid) {
+                resultDiv.className = 'success';
+                resultDiv.textContent = '✓ Valid MEGA URL';
+            } else {
+                resultDiv.className = 'error';
+                resultDiv.textContent = '✗ Invalid MEGA URL';
+            }
+        }
+
+        async function validateUrl() {
+            const button = document.getElementById('validateButton');
+            const input = document.getElementById('urlInput');
+            const url = input.value.trim();
             
-            if (!urlInput) {
-                showResult('Please enter a URL', 'error');
+            if (!url) {
+                showResult(false);
                 return;
             }
 
-            setLoading(true);
-            isUrlValid(urlInput).finally(() => {
-                setLoading(false);
-            });
+            button.disabled = true;
+            const isValid = await isUrlValid(url);
+            showResult(isValid);
+            button.disabled = false;
         }
 
-        // Add Enter key support
         document.getElementById('urlInput').addEventListener('keypress', function(e) {
             if (e.key === 'Enter') {
                 validateUrl();
@@ -244,4 +140,4 @@
         });
     </script>
 </body>
-    </html>
+</html>
