@@ -23,7 +23,14 @@
         h1 {
             color: #333;
             text-align: center;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            text-align: center;
+            color: #666;
             margin-bottom: 30px;
+            font-size: 0.9em;
         }
 
         .input-group {
@@ -74,6 +81,7 @@
             font-style: italic;
             color: #666;
             word-break: break-all;
+            font-size: 0.9em;
         }
 
         .success {
@@ -112,6 +120,7 @@
 <body>
     <div class="container">
         <h1>MEGA URL Validator</h1>
+        <div class="subtitle">Validates MEGA links directly from your browser</div>
         <div class="input-group">
             <input type="text" id="urlInput" placeholder="Enter MEGA URL (https://mega.nz/file/... or folder/...)" />
             <button onclick="validateUrl()" id="validateButton">Validate URL</button>
@@ -128,7 +137,14 @@
         async function fetchWithRetry(url, options, maxRetries = 3) {
             for (let i = 0; i < maxRetries; i++) {
                 try {
-                    const response = await fetch(url, options);
+                    const response = await fetch(url, {
+                        ...options,
+                        mode: 'cors',  // Explicitly request CORS
+                        credentials: 'omit'  // Don't send credentials
+                    });
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
                     return await response.json();
                 } catch (error) {
                     if (i === maxRetries - 1) throw error;
@@ -177,7 +193,7 @@
             });
 
             const apiUrl = 'https://g.api.mega.co.nz/cs?' + params.toString();
-            apiLinkDiv.innerText = 'API Response Code: ';
+            apiLinkDiv.innerText = 'Checking MEGA API... ';
 
             try {
                 const result = await fetchWithRetry(apiUrl, {
@@ -189,18 +205,22 @@
                 });
 
                 // Display the response code
-                apiLinkDiv.innerText += result[0];
+                apiLinkDiv.innerText = `MEGA API Response: ${result[0]}`;
 
                 if (result[0] === -2) {
-                    showResult('The URL is valid and content exists! ✓', 'success');
+                    showResult('✓ The MEGA link is valid and the content exists!', 'success');
                 } else if (result[0] === -9) {
-                    showResult('The URL is not found (content may have been deleted) ✗', 'error');
+                    showResult('✗ Content not found (may have been deleted)', 'error');
                 } else {
-                    showResult(`The URL is invalid (Error code: ${result[0]}) ✗`, 'error');
+                    showResult(`✗ Invalid MEGA link (Error code: ${result[0]})`, 'error');
                 }
             } catch (error) {
                 console.error('Error:', error);
-                showResult('An error occurred while validating the URL. Please try again later.', 'error');
+                if (error.message.includes('CORS')) {
+                    showResult('Unable to validate due to CORS policy. Try using a different browser.', 'error');
+                } else {
+                    showResult('Network error while validating the URL. Please try again later.', 'error');
+                }
             }
         }
 
