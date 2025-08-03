@@ -98,27 +98,34 @@
             }
             debugInfo += '- Empty check: Passed\n';
 
-            // Step 2: Validate URL with regex
+            // Step 2: Split URL to handle key separately
+            const urlParts = url.split(/#|!/);
+            const baseUrl = urlParts[0];
+            debugInfo += `- Base URL (before # or !): ${baseUrl}\n`;
+
+            // Step 3: Validate base URL with regex
             const megaLinkRegex = /^https:\/\/mega\.nz\/(file|folder)\/[a-zA-Z0-9!_-]+$/;
             debugInfo += `- Regex pattern: ${megaLinkRegex}\n`;
-            debugInfo += `- URL tested: ${url.split(/#|!/)[0]}\n`;
-            const regexMatch = megaLinkRegex.test(url);
+            debugInfo += `- URL tested: ${baseUrl}\n`;
+            const regexMatch = megaLinkRegex.test(baseUrl);
             debugInfo += `- Regex match: ${regexMatch}\n`;
             if (!regexMatch) {
                 resultDiv.innerText = 'Please enter a valid Mega.nz link (e.g., https://mega.nz/file/... or https://mega.nz/folder/...).\n\n' + debugInfo;
                 resultDiv.classList.add('text-red');
+                const matchAttempt = baseUrl.match(megaLinkRegex);
+                debugInfo += `- Match attempt: ${matchAttempt ? JSON.stringify(matchAttempt) : 'null'}\n`;
                 resultDiv.innerHTML += `<div class="debug">${debugInfo}</div>`;
                 return;
             }
-            const match = url.match(megaLinkRegex);
+            const match = baseUrl.match(megaLinkRegex);
             debugInfo += `- Captured group (file|folder): ${match[1]}\n`;
             debugInfo += `- Captured ID: ${match[2]}\n`;
 
-            // Step 3: Extract key
-            const id = url.split(/#|!/)[1];
+            // Step 4: Extract key
+            const id = urlParts[1];
             debugInfo += `- Split delimiter: /#!/\n`;
-            debugInfo += `- Split result: ${JSON.stringify(url.split(/#|!/))}\n`;
-            debugInfo += `- Extracted key: ${id}\n`;
+            debugInfo += `- Split result: ${JSON.stringify(urlParts)}\n`;
+            debugInfo += `- Extracted key: ${id || 'none'}\n`;
             if (!id) {
                 resultDiv.innerText = 'Invalid Mega.nz link: No key found.\n\n' + debugInfo;
                 resultDiv.classList.add('text-red');
@@ -128,7 +135,7 @@
             }
             debugInfo += '- Key check: Passed\n';
 
-            // Step 4: Construct API request
+            // Step 5: Construct API request
             const data = [{ a: 'g', p: id }];
             debugInfo += `- API endpoint: https://g.api.mega.co.nz/cs\n`;
             debugInfo += `- Request method: POST\n`;
