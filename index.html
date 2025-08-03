@@ -20,7 +20,7 @@
             padding: 20px;
             border-radius: 8px;
             box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
-            max-width: 400px;
+            max-width: 600px;
             width: 100%;
             text-align: center;
         }
@@ -51,7 +51,7 @@
         #result {
             margin-top: 15px;
             font-size: 14px;
-            white-space: pre-wrap; /* Preserve line breaks in output */
+            white-space: pre-wrap;
             text-align: left;
         }
         .text-green {
@@ -60,12 +60,19 @@
         .text-red {
             color: #dc3545;
         }
+        .debug {
+            color: #6c757d;
+            font-size: 12px;
+            margin-top: 10px;
+            border-top: 1px solid #ccc;
+            padding-top: 10px;
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <h1>Mega Link Checker</h1>
-        <input type="text" id="megaLink" placeholder="Enter Mega.nz link">
+        <input type="text" id="megaLink" placeholder="Enter Mega.nz link" value="https://mega.nz/folder/nsIkjIbZ#2t44kmHPg50yPwg5csn2uA">
         <button onclick="checkLink()">Check Link</button>
         <div id="result"></div>
     </div>
@@ -77,28 +84,59 @@
             resultDiv.innerText = '';
             resultDiv.classList.remove('text-green', 'text-red');
 
+            let debugInfo = 'Debugging Information:\n';
+            debugInfo += `- Input URL: ${url}\n`;
+            debugInfo += `- Trimmed URL: ${url}\n`;
+
+            // Step 1: Check if URL is empty
             if (!url) {
-                resultDiv.innerText = 'Please enter a Mega.nz link.';
+                resultDiv.innerText = 'Please enter a Mega.nz link.\n\n' + debugInfo;
                 resultDiv.classList.add('text-red');
+                debugInfo += '- Empty check: Failed\n';
+                resultDiv.innerHTML += `<div class="debug">${debugInfo}</div>`;
                 return;
             }
+            debugInfo += '- Empty check: Passed\n';
 
+            // Step 2: Validate URL with regex
             const megaLinkRegex = /^https:\/\/mega\.nz\/(file|folder)\/[a-zA-Z0-9!_-]+$/;
-            if (!megaLinkRegex.test(url)) {
-                resultDiv.innerText = 'Please enter a valid Mega.nz link (e.g., https://mega.nz/file/... or https://mega.nz/folder/...).';
+            debugInfo += `- Regex pattern: ${megaLinkRegex}\n`;
+            debugInfo += `- URL tested: ${url.split(/#|!/)[0]}\n`;
+            const regexMatch = megaLinkRegex.test(url);
+            debugInfo += `- Regex match: ${regexMatch}\n`;
+            if (!regexMatch) {
+                resultDiv.innerText = 'Please enter a valid Mega.nz link (e.g., https://mega.nz/file/... or https://mega.nz/folder/...).\n\n' + debugInfo;
                 resultDiv.classList.add('text-red');
+                resultDiv.innerHTML += `<div class="debug">${debugInfo}</div>`;
                 return;
             }
+            const match = url.match(megaLinkRegex);
+            debugInfo += `- Captured group (file|folder): ${match[1]}\n`;
+            debugInfo += `- Captured ID: ${match[2]}\n`;
 
+            // Step 3: Extract key
             const id = url.split(/#|!/)[1];
+            debugInfo += `- Split delimiter: /#!/\n`;
+            debugInfo += `- Split result: ${JSON.stringify(url.split(/#|!/))}\n`;
+            debugInfo += `- Extracted key: ${id}\n`;
             if (!id) {
-                resultDiv.innerText = 'Invalid Mega.nz link: No key found.';
+                resultDiv.innerText = 'Invalid Mega.nz link: No key found.\n\n' + debugInfo;
                 resultDiv.classList.add('text-red');
+                debugInfo += '- Key check: Failed\n';
+                resultDiv.innerHTML += `<div class="debug">${debugInfo}</div>`;
                 return;
             }
+            debugInfo += '- Key check: Passed\n';
+
+            // Step 4: Construct API request
+            const data = [{ a: 'g', p: id }];
+            debugInfo += `- API endpoint: https://g.api.mega.co.nz/cs\n`;
+            debugInfo += `- Request method: POST\n`;
+            debugInfo += `- Request headers: Content-Type: application/json\n`;
+            debugInfo += `- Request body: ${JSON.stringify(data)}\n`;
+            debugInfo += `- Full HTTP request:\n  POST /cs HTTP/1.1\n  Host: g.api.mega.co.nz\n  Content-Type: application/json\n  Content-Length: ${JSON.stringify(data).length}\n\n  ${JSON.stringify(data)}\n`;
 
             try {
-                const data = [{ a: 'g', p: id }];
                 const response = await fetch('https://g.api.mega.co.nz/cs', {
                     method: 'POST',
                     headers: {
@@ -108,11 +146,20 @@
                 });
 
                 const result = await response.json();
+                debugInfo += `- Response received: ${JSON.stringify(result, null, 2)}\n`;
+                debugInfo += `- Response is array: ${Array.isArray(result)}\n`;
+                debugInfo += `- Response length: ${result.length}\n`;
 
                 if (Array.isArray(result) && result.length > 0) {
                     const firstResult = result[0];
+                    debugInfo += `- First result type: ${typeof firstResult}\n`;
+
                     if (typeof firstResult === 'object' && firstResult.s !== undefined) {
                         // Valid link with metadata
+                        debugInfo += `- Size check (s exists): true\n`;
+                        debugInfo += `- Size value: ${firstResult.s}\n`;
+                        debugInfo += `- Attributes: ${firstResult.at ? JSON.stringify(firstResult.at) : 'N/A'}\n`;
+                        debugInfo += `- Timestamp: ${firstResult.ts ? firstResult.ts : 'N/A'}\n`;
                         let output = 'The link is valid and the file/folder is accessible.\n\nAPI Response Details:\n';
                         output += `- Size: ${firstResult.s ? (firstResult.s / 1024 / 1024).toFixed(2) + ' MB' : 'N/A'}\n`;
                         output += `- Attributes: ${firstResult.at ? JSON.stringify(firstResult.at) : 'N/A'}\n`;
@@ -122,35 +169,45 @@
                         resultDiv.classList.add('text-green');
                     } else if (typeof firstResult === 'number') {
                         // Error code
+                        debugInfo += `- Error code: ${firstResult}\n`;
                         let errorMessage = 'The link is invalid or the file/folder is not accessible.\n\nAPI Error Code: ' + firstResult + '\n';
                         switch (firstResult) {
                             case -9:
                                 errorMessage += 'Error: Resource not found.';
+                                debugInfo += '- Error message: Resource not found\n';
                                 break;
                             case -16:
                                 errorMessage += 'Error: Access denied or resource is restricted.';
+                                debugInfo += '- Error message: Access denied or resource is restricted\n';
                                 break;
                             case -11:
                                 errorMessage += 'Error: Resource temporarily unavailable.';
+                                debugInfo += '- Error message: Resource temporarily unavailable\n';
                                 break;
                             default:
                                 errorMessage += 'Error: Unknown error occurred.';
+                                debugInfo += '- Error message: Unknown error occurred\n';
                         }
                         errorMessage += '\nFull Response: ' + JSON.stringify(result, null, 2);
                         resultDiv.innerText = errorMessage;
                         resultDiv.classList.add('text-red');
                     } else {
+                        debugInfo += '- Response format: Unexpected\n';
                         resultDiv.innerText = 'Unexpected API response format.\n\nFull Response: ' + JSON.stringify(result, null, 2);
                         resultDiv.classList.add('text-red');
                     }
                 } else {
+                    debugInfo += '- Response format: Empty or invalid\n';
                     resultDiv.innerText = 'Empty or invalid API response.\n\nFull Response: ' + JSON.stringify(result, null, 2);
                     resultDiv.classList.add('text-red');
                 }
             } catch (error) {
+                debugInfo += `- Error caught: ${error.message}\n`;
                 resultDiv.innerText = 'Error checking the link: ' + error.message + '\nPlease try again.';
                 resultDiv.classList.add('text-red');
             }
+
+            resultDiv.innerHTML += `<div class="debug">${debugInfo}</div>`;
         }
     </script>
 </body>
